@@ -1,0 +1,27 @@
+{
+  "name": "paint-shop-inventory-saas",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "body-parser": "^1.20.2",
+    "ejs": "^3.1.9",
+    "express": "^4.18.2",
+    "express-rate-limit": "^7.4.0",
+    "express-session": "^1.17.3",
+    "express-validator": "^7.2.0",
+    "helmet": "^8.1.0",
+    "mongoose": "^7.5.0"
+  },
+  "devDependencies": {
+    "mongodb-memory-server": "^10.1.0"
+  },
+  "engines": {
+    "node": "22.x"
+  }
+}
