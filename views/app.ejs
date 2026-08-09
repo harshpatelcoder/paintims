@@ -1,0 +1,1476 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PaintStock SaaS - <%= user.role === 'super_admin' ? 'Super Admin Portal' : (shop ? shop.name : 'Inventory') %></title>
+  <!-- Bootstrap 5.3 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Google Fonts: Inter -->
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    :root {
+      --primary: #0EA5E9;
+      --primary-dark: #0284C7;
+      --light-blue: #E0F2FE;
+      --bg-slate: #F8FAFC;
+      --text-dark: #0F172A;
+      --text-muted: #64748B;
+      --border-color: #E2E8F0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg-slate);
+      color: var(--text-dark);
+      overflow-x: hidden;
+    }
+    .sidebar {
+      width: 250px;
+      min-height: 100vh;
+      background-color: #FFFFFF;
+      border-right: 1px solid var(--border-color);
+      position: fixed;
+      top: 0;
+      left: 0;
+      z-index: 100;
+      transition: transform 0.3s ease;
+    }
+    .main-wrapper {
+      margin-left: 250px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    .top-navbar {
+      height: 64px;
+      background-color: #FFFFFF;
+      border-bottom: 1px solid var(--border-color);
+      padding: 0 1.5rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 90;
+    }
+    .nav-link-custom {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.65rem 1rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      border-radius: 8px;
+      text-decoration: none;
+      transition: all 0.15s ease;
+      font-size: 0.9rem;
+      margin-bottom: 0.2rem;
+    }
+    .nav-link-custom:hover {
+      background-color: #F1F5F9;
+      color: var(--primary-dark);
+    }
+    .nav-link-custom.active {
+      background-color: var(--light-blue);
+      color: var(--primary-dark);
+      font-weight: 600;
+    }
+    .nav-section-title {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      color: #94A3B8;
+      text-transform: uppercase;
+      margin: 1.25rem 1rem 0.5rem 1rem;
+    }
+    .stat-card {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 1.25rem;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    .stat-card:hover {
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+    }
+    .stat-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card-custom {
+      background: #FFFFFF;
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    }
+    .btn-sky {
+      background-color: var(--primary);
+      color: #FFFFFF;
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+      padding: 0.5rem 1rem;
+    }
+    .btn-sky:hover {
+      background-color: var(--primary-dark);
+      color: #FFFFFF;
+    }
+    .btn-light-sky {
+      background-color: var(--light-blue);
+      color: var(--primary-dark);
+      font-weight: 600;
+      border: none;
+      border-radius: 8px;
+    }
+    .btn-light-sky:hover {
+      background-color: #BAE6FD;
+      color: var(--primary-dark);
+    }
+    .badge-in-stock {
+      background-color: #DCFCE7;
+      color: #15803D;
+      font-weight: 600;
+      padding: 0.35em 0.65em;
+      border-radius: 6px;
+    }
+    .badge-low-stock {
+      background-color: #FEF3C7;
+      color: #B45309;
+      font-weight: 600;
+      padding: 0.35em 0.65em;
+      border-radius: 6px;
+    }
+    .badge-out-of-stock {
+      background-color: #FEE2E2;
+      color: #B91C1C;
+      font-weight: 600;
+      padding: 0.35em 0.65em;
+      border-radius: 6px;
+    }
+    .badge-role {
+      background-color: var(--light-blue);
+      color: var(--primary-dark);
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 0.25em 0.6em;
+      border-radius: 4px;
+    }
+    @media (max-width: 991.98px) {
+      .sidebar {
+        transform: translateX(-100%);
+      }
+      .sidebar.show {
+        transform: translateX(0);
+      }
+      .main-wrapper {
+        margin-left: 0;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<%
+  function formatCurrency(num) {
+    return '₹' + Number(num || 0).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  }
+%>
+
+<!-- SIDEBAR NAVIGATION -->
+<div class="sidebar p-3" id="appSidebar">
+  <div class="d-flex align-items-center justify-content-between mb-4 px-2 pt-2">
+    <a href="/app?page=dashboard" class="d-flex align-items-center gap-2 text-decoration-none" style="color: var(--primary-dark);">
+      <i data-lucide="paint-bucket" style="width: 28px; height: 28px;"></i>
+      <div>
+        <div class="fw-bold fs-5 leading-tight">PaintStock</div>
+        <div class="text-muted extra-small" style="font-size: 0.7rem;">Inventory SaaS</div>
+      </div>
+    </a>
+    <button class="btn btn-sm btn-light d-lg-none" id="sidebarCloseBtn">
+      <i data-lucide="x"></i>
+    </button>
+  </div>
+
+  <% if (user.must_change_password) { %>
+    <div class="alert alert-warning small p-2 text-center rounded-3 mb-3">
+      <strong>Security Notice</strong><br>
+      Please change your password to continue.
+    </div>
+    <a href="/app?page=change_password" class="nav-link-custom active">
+      <i data-lucide="key"></i>
+      <span>Change Password</span>
+    </a>
+    <a href="/logout" class="nav-link-custom text-danger mt-2">
+      <i data-lucide="log-out"></i>
+      <span>Sign Out</span>
+    </a>
+  <% } else { %>
+
+    <div class="nav-section-title">HOME</div>
+    <a href="/app?page=dashboard" class="nav-link-custom <%= page === 'dashboard' ? 'active' : '' %>">
+      <i data-lucide="layout-dashboard"></i>
+      <span>Dashboard</span>
+    </a>
+
+    <% if (user.role === 'super_admin') { %>
+      <div class="nav-section-title">PLATFORM</div>
+      <a href="/app?page=shops" class="nav-link-custom <%= page === 'shops' ? 'active' : '' %>">
+        <i data-lucide="store"></i>
+        <span>Manage Shops</span>
+      </a>
+    <% } else { %>
+      <div class="nav-section-title">INVENTORY</div>
+      <a href="/app?page=inventory" class="nav-link-custom <%= page === 'inventory' ? 'active' : '' %>">
+        <i data-lucide="boxes"></i>
+        <span>All Products</span>
+      </a>
+      <% if (user.role === 'shop_admin') { %>
+        <a href="/app?page=add_product" class="nav-link-custom <%= page === 'add_product' ? 'active' : '' %>">
+          <i data-lucide="plus-circle"></i>
+          <span>Add Product</span>
+        </a>
+      <% } %>
+      <a href="/app?page=stock_management" class="nav-link-custom <%= page === 'stock_management' ? 'active' : '' %>">
+        <i data-lucide="arrow-left-right"></i>
+        <span>Stock IN / OUT</span>
+      </a>
+      <a href="/app?page=low_stock" class="nav-link-custom <%= page === 'low_stock' ? 'active' : '' %>">
+        <i data-lucide="alert-triangle"></i>
+        <span>Low Stock Alerts</span>
+      </a>
+
+      <div class="nav-section-title">BUSINESS</div>
+      <a href="/app?page=suppliers" class="nav-link-custom <%= page === 'suppliers' ? 'active' : '' %>">
+        <i data-lucide="truck"></i>
+        <span>Suppliers</span>
+      </a>
+      <% if (user.role === 'shop_admin') { %>
+        <a href="/app?page=staff" class="nav-link-custom <%= page === 'staff' ? 'active' : '' %>">
+          <i data-lucide="users"></i>
+          <span>Staff Accounts</span>
+        </a>
+        <a href="/app?page=reports" class="nav-link-custom <%= page === 'reports' ? 'active' : '' %>">
+          <i data-lucide="bar-chart-3"></i>
+          <span>Reports</span>
+        </a>
+      <% } %>
+      <a href="/app?page=stock_history" class="nav-link-custom <%= page === 'stock_history' ? 'active' : '' %>">
+        <i data-lucide="history"></i>
+        <span>Stock History</span>
+      </a>
+    <% } %>
+
+    <div class="nav-section-title">ACCOUNT</div>
+    <a href="/app?page=change_password" class="nav-link-custom <%= page === 'change_password' ? 'active' : '' %>">
+      <i data-lucide="key"></i>
+      <span>Change Password</span>
+    </a>
+    <a href="/logout" class="nav-link-custom text-danger">
+      <i data-lucide="log-out"></i>
+      <span>Sign Out</span>
+    </a>
+  <% } %>
+</div>
+
+<!-- MAIN WRAPPER -->
+<div class="main-wrapper">
+  <!-- TOP NAVBAR -->
+  <nav class="top-navbar">
+    <div class="d-flex align-items-center gap-3">
+      <button class="btn btn-sm btn-light d-lg-none" id="sidebarToggleBtn">
+        <i data-lucide="menu"></i>
+      </button>
+      <div>
+        <h6 class="fw-bold mb-0">
+          <% if (user.role === 'super_admin') { %>
+            Super Admin Control Center
+          <% } else if (shop) { %>
+            <%= shop.name %>
+          <% } else { %>
+            Inventory Portal
+          <% } %>
+        </h6>
+        <div class="text-muted extra-small d-none d-sm-block" style="font-size: 0.75rem;">
+          <%= user.email %>
+        </div>
+      </div>
+    </div>
+
+    <!-- USER DROPDOWN MENU -->
+    <div class="dropdown">
+      <button class="btn btn-light btn-sm dropdown-toggle d-flex align-items-center gap-2 border-0" type="button" data-bs-toggle="dropdown">
+        <div class="rounded-circle bg-light-sky text-primary d-flex align-items-center justify-content-center fw-bold" style="width: 32px; height: 32px; background-color: var(--light-blue); color: var(--primary-dark);">
+          <%= user.full_name ? user.full_name.charAt(0).toUpperCase() : 'U' %>
+        </div>
+        <div class="text-start d-none d-md-block">
+          <div class="fw-semibold small leading-none"><%= user.full_name %></div>
+          <span class="badge badge-role mt-1">
+            <%= user.role === 'super_admin' ? 'Super Admin' : (user.role === 'shop_admin' ? 'Shop Admin' : 'Staff') %>
+          </span>
+        </div>
+      </button>
+      <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 mt-2">
+        <li class="px-3 py-2 border-bottom">
+          <div class="fw-bold small"><%= user.full_name %></div>
+          <div class="text-muted extra-small" style="font-size: 0.75rem;"><%= user.email %></div>
+        </li>
+        <li><a class="dropdown-menu-item dropdown-item small py-2" href="/app?page=change_password"><i data-lucide="key" class="me-2 text-muted" style="width: 16px;"></i>Change Password</a></li>
+        <li><hr class="dropdown-divider my-1"></li>
+        <li><a class="dropdown-menu-item dropdown-item small py-2 text-danger" href="/logout"><i data-lucide="log-out" class="me-2" style="width: 16px;"></i>Logout</a></li>
+      </ul>
+    </div>
+  </nav>
+
+  <!-- CONTENT CONTAINER -->
+  <div class="p-3 p-md-4">
+
+    <!-- ALERT MESSAGES -->
+    <% if (typeof error_msg !== 'undefined' && error_msg) { %>
+      <div class="alert alert-danger border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-4">
+        <i data-lucide="alert-circle" class="flex-shrink-0"></i>
+        <div><%= error_msg %></div>
+      </div>
+    <% } %>
+
+    <% if (typeof success_msg !== 'undefined' && success_msg) { %>
+      <div class="alert alert-success border-0 shadow-sm rounded-3 d-flex align-items-center gap-2 mb-4">
+        <i data-lucide="check-circle" class="flex-shrink-0"></i>
+        <div><%= success_msg %></div>
+      </div>
+    <% } %>
+
+    <!-- PAGE ROUTING CONTENTS -->
+
+    <% if (page === 'change_password') { %>
+      <!-- CHANGE PASSWORD PAGE -->
+      <div class="row justify-content-center">
+        <div class="col-md-6 col-lg-5">
+          <div class="card card-custom p-4">
+            <h5 class="fw-bold mb-1">Secure Your Account</h5>
+            <p class="text-muted small mb-3">Create a strong password to keep your paint shop data protected.</p>
+
+            <div class="p-3 rounded-3 mb-3 small" style="background-color: var(--light-blue); color: var(--primary-dark);">
+              <strong>Password Policy Rules:</strong>
+              <ul class="mb-0 ps-3 mt-1">
+                <li>At least 8 characters long</li>
+                <li>At least 1 uppercase letter (A-Z)</li>
+                <li>At least 1 lowercase letter (a-z)</li>
+                <li>At least 1 number (0-9)</li>
+              </ul>
+            </div>
+
+            <form action="/app" method="POST">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="action" value="change_password">
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">Current Password</label>
+                <input type="password" name="current_password" class="form-control" required autofocus>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">New Password</label>
+                <input type="password" name="new_password" class="form-control" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold text-secondary">Confirm New Password</label>
+                <input type="password" name="confirm_password" class="form-control" required>
+              </div>
+
+              <button type="submit" class="btn btn-sky w-100 mt-2">
+                Update Password
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    <% } else if (user.role === 'super_admin' && page === 'dashboard') { %>
+      <!-- SUPER ADMIN DASHBOARD -->
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <div>
+          <h4 class="fw-bold mb-1">Platform Overview</h4>
+          <p class="text-muted small mb-0">Multi-Tenant Paint Shop SaaS System Metrics.</p>
+        </div>
+        <a href="/app?page=shops" class="btn btn-sky btn-sm d-inline-flex align-items-center gap-1">
+          <i data-lucide="plus" style="width: 16px;"></i> Create New Shop
+        </a>
+      </div>
+
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="stat-card">
+            <div class="text-muted extra-small fw-semibold text-uppercase mb-1">Total Shops</div>
+            <div class="h3 fw-bold mb-0 text-dark"><%= dashboard_stats.total_shops || 0 %></div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="stat-card">
+            <div class="text-muted extra-small fw-semibold text-uppercase mb-1 text-success">Active Shops</div>
+            <div class="h3 fw-bold mb-0 text-success"><%= dashboard_stats.active_shops || 0 %></div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="stat-card">
+            <div class="text-muted extra-small fw-semibold text-uppercase mb-1 text-danger">Inactive Shops</div>
+            <div class="h3 fw-bold mb-0 text-danger"><%= dashboard_stats.inactive_shops || 0 %></div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="stat-card">
+            <div class="text-muted extra-small fw-semibold text-uppercase mb-1">Total Products</div>
+            <div class="h3 fw-bold mb-0 text-dark"><%= dashboard_stats.total_products || 0 %></div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="stat-card">
+            <div class="text-muted extra-small fw-semibold text-uppercase mb-1">Total Users</div>
+            <div class="h3 fw-bold mb-0 text-dark"><%= dashboard_stats.total_users || 0 %></div>
+          </div>
+        </div>
+        <div class="col-6 col-md-4 col-xl-2">
+          <div class="stat-card">
+            <div class="text-muted extra-small fw-semibold text-uppercase mb-1">Inventory Value</div>
+            <div class="h4 fw-bold mb-0 text-primary"><%= formatCurrency(dashboard_stats.total_inventory_value) %></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card card-custom p-4">
+        <h5 class="fw-bold mb-3">Registered Paint Shops</h5>
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th>Shop Name</th>
+                <th>Owner</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (shops && shops.length > 0) { %>
+                <% shops.forEach(s => { %>
+                  <tr>
+                    <td class="fw-bold"><%= s.name %></td>
+                    <td><%= s.owner_name %></td>
+                    <td><%= s.email %></td>
+                    <td><%= s.phone || 'N/A' %></td>
+                    <td>
+                      <span class="badge <%= s.status === 'active' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %>">
+                        <%= s.status.toUpperCase() %>
+                      </span>
+                    </td>
+                    <td>
+                      <form action="/app" method="POST" class="d-inline">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="action" value="toggle_shop_status">
+                        <input type="hidden" name="shop_id" value="<%= s._id %>">
+                        <button type="submit" class="btn btn-sm <%= s.status === 'active' ? 'btn-outline-danger' : 'btn-outline-success' %> py-1 px-2">
+                          <%= s.status === 'active' ? 'Deactivate' : 'Activate' %>
+                        </button>
+                      </form>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="6" class="text-center text-muted py-4">No shops registered yet.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    <% } else if (user.role === 'super_admin' && page === 'shops') { %>
+      <!-- SUPER ADMIN SHOPS MANAGEMENT -->
+      <div class="d-flex align-items-center justify-content-between mb-4">
+        <h4 class="fw-bold mb-0">Shop Management</h4>
+        <button class="btn btn-sky btn-sm" data-bs-toggle="modal" data-bs-target="#createShopModal">
+          <i data-lucide="plus" style="width: 16px;"></i> Create New Paint Shop
+        </button>
+      </div>
+
+      <div class="card card-custom p-4 mb-4">
+        <h5 class="fw-bold mb-3">All Registered Shops & Shop Admins</h5>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead class="table-light small">
+              <tr>
+                <th>Shop</th>
+                <th>Owner</th>
+                <th>Shop Email & Contact</th>
+                <th>Shop Admin User</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% shops.forEach(s => { %>
+                <% const admin = shop_admins.find(sa => sa.shop_id && sa.shop_id._id.toString() === s._id.toString()); %>
+                <tr>
+                  <td>
+                    <div class="fw-bold"><%= s.name %></div>
+                    <div class="text-muted extra-small"><%= s.address %></div>
+                  </td>
+                  <td><%= s.owner_name %></td>
+                  <td>
+                    <div><%= s.email %></div>
+                    <div class="text-muted extra-small"><%= s.phone %></div>
+                  </td>
+                  <td>
+                    <% if (admin) { %>
+                      <div class="fw-semibold small"><%= admin.full_name %></div>
+                      <div class="text-muted extra-small"><%= admin.email %></div>
+                    <% } else { %>
+                      <span class="text-muted small">No Admin</span>
+                    <% } %>
+                  </td>
+                  <td>
+                    <span class="badge <%= s.status === 'active' ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %>">
+                      <%= s.status.toUpperCase() %>
+                    </span>
+                  </td>
+                  <td>
+                    <div class="d-flex gap-2">
+                      <form action="/app" method="POST" class="d-inline">
+                        <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                        <input type="hidden" name="action" value="toggle_shop_status">
+                        <input type="hidden" name="shop_id" value="<%= s._id %>">
+                        <button type="submit" class="btn btn-sm <%= s.status === 'active' ? 'btn-outline-danger' : 'btn-outline-success' %> py-1">
+                          <%= s.status === 'active' ? 'Deactivate' : 'Activate' %>
+                        </button>
+                      </form>
+
+                      <% if (admin) { %>
+                        <form action="/app" method="POST" class="d-inline" onsubmit="return confirm('Force password reset for this shop admin?');">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="action" value="force_password_reset">
+                          <input type="hidden" name="target_user_id" value="<%= admin._id %>">
+                          <button type="submit" class="btn btn-sm btn-outline-warning py-1">
+                            Reset Password
+                          </button>
+                        </form>
+                      <% } %>
+                    </div>
+                  </td>
+                </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- CREATE SHOP MODAL -->
+      <div class="modal fade" id="createShopModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+          <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+              <h5 class="modal-header-title modal-title fw-bold">Register New Paint Shop</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/app" method="POST">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="action" value="create_shop">
+              <div class="modal-body">
+                <h6 class="fw-bold text-primary mb-3">Shop Details</h6>
+                <div class="row g-3 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Shop Name *</label>
+                    <input type="text" name="shop_name" class="form-control" placeholder="Patel Paints & Hardware" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Owner Name *</label>
+                    <input type="text" name="owner_name" class="form-control" placeholder="Ramesh Patel" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Shop Email *</label>
+                    <input type="email" name="email" class="form-control" placeholder="info@patelpaints.com" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Phone</label>
+                    <input type="text" name="phone" class="form-control" placeholder="+91 9876543210">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label small fw-semibold">Address</label>
+                    <input type="text" name="address" class="form-control" placeholder="Main Market Road, City">
+                  </div>
+                </div>
+
+                <hr>
+
+                <h6 class="fw-bold text-primary mb-3">Shop Administrator Account</h6>
+                <div class="row g-3">
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Admin Full Name *</label>
+                    <input type="text" name="admin_name" class="form-control" placeholder="Ramesh Patel" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label small fw-semibold">Admin Login Email *</label>
+                    <input type="email" name="admin_email" class="form-control" placeholder="patel.admin@gmail.com" required>
+                  </div>
+                  <div class="col-md-12">
+                    <label class="form-label small fw-semibold">Initial Temporary Password *</label>
+                    <input type="text" name="initial_password" class="form-control" value="PaintShop2026" required>
+                    <div class="form-text extra-small">The Shop Admin will be forced to change this password on first login.</div>
+                  </div>
+                </div>
+              </div>
+              <div class="modal-footer border-top">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-sky">Create Shop & Admin</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    <% } else if (page === 'dashboard') { %>
+      <!-- SHOP ADMIN & STAFF DASHBOARD -->
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <div>
+          <h4 class="fw-bold mb-1"><%= shop ? shop.name : 'Inventory' %> Dashboard</h4>
+          <p class="text-muted small mb-0">Overview of paint inventory, stock status, and movement.</p>
+        </div>
+        <div class="d-flex gap-2">
+          <a href="/app?page=stock_management" class="btn btn-sky btn-sm d-inline-flex align-items-center gap-1">
+            <i data-lucide="arrow-down-left" style="width: 16px;"></i> Stock IN / OUT
+          </a>
+          <% if (user.role === 'shop_admin') { %>
+            <a href="/app?page=add_product" class="btn btn-light-sky btn-sm d-inline-flex align-items-center gap-1">
+              <i data-lucide="plus" style="width: 16px;"></i> Add Product
+            </a>
+          <% } %>
+        </div>
+      </div>
+
+      <!-- METRIC CARDS -->
+      <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="text-muted extra-small fw-semibold text-uppercase">Total Products</div>
+              <div class="stat-icon" style="background-color: var(--light-blue); color: var(--primary-dark);">
+                <i data-lucide="boxes" style="width: 20px;"></i>
+              </div>
+            </div>
+            <div class="h3 fw-bold mb-0 text-dark"><%= dashboard_stats.total_products || 0 %></div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="text-muted extra-small fw-semibold text-uppercase">Stock Units</div>
+              <div class="stat-icon bg-success-subtle text-success">
+                <i data-lucide="layers" style="width: 20px;"></i>
+              </div>
+            </div>
+            <div class="h3 fw-bold mb-0 text-dark"><%= (dashboard_stats.total_stock_units || 0).toLocaleString('en-IN') %></div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+          <div class="stat-card">
+            <div class="d-flex justify-content-between align-items-center mb-2">
+              <div class="text-muted extra-small fw-semibold text-uppercase">Inventory Value</div>
+              <div class="stat-icon bg-info-subtle text-info">
+                <i data-lucide="indian-rupee" style="width: 20px;"></i>
+              </div>
+            </div>
+            <div class="h4 fw-bold mb-0 text-primary"><%= formatCurrency(dashboard_stats.inventory_value) %></div>
+          </div>
+        </div>
+
+        <div class="col-6 col-md-3">
+          <a href="/app?page=low_stock" class="text-decoration-none">
+            <div class="stat-card">
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <div class="text-muted extra-small fw-semibold text-uppercase">Low / Out Stock</div>
+                <div class="stat-icon bg-warning-subtle text-warning">
+                  <i data-lucide="alert-triangle" style="width: 20px;"></i>
+                </div>
+              </div>
+              <div class="h3 fw-bold mb-0 text-warning">
+                <%= (dashboard_stats.low_stock_count || 0) + (dashboard_stats.out_of_stock_count || 0) %>
+              </div>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <!-- LOW STOCK ALERT BANNER -->
+      <% if (low_stock_products.length > 0 || out_of_stock_products.length > 0) { %>
+        <div class="alert alert-warning border-0 shadow-sm rounded-3 p-3 mb-4 d-flex align-items-center justify-content-between flex-wrap gap-2">
+          <div class="d-flex align-items-center gap-2">
+            <i data-lucide="alert-triangle" class="text-warning"></i>
+            <div>
+              <strong>Low Stock Warning:</strong> You have <strong><%= low_stock_products.length %></strong> low-stock products and <strong><%= out_of_stock_products.length %></strong> out-of-stock items requiring restocking.
+            </div>
+          </div>
+          <a href="/app?page=low_stock" class="btn btn-warning btn-sm fw-bold">View Items</a>
+        </div>
+      <% } %>
+
+      <!-- RECENT STOCK TRANSACTIONS TABLE -->
+      <div class="card card-custom p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <h5 class="fw-bold mb-0">Recent Stock Movements</h5>
+          <a href="/app?page=stock_history" class="text-primary small text-decoration-none fw-semibold">View Full History &rarr;</a>
+        </div>
+
+        <div class="table-responsive">
+          <table class="table align-middle mb-0">
+            <thead class="table-light small">
+              <tr>
+                <th>Date & Time</th>
+                <th>Product Name</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Logged By</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (transactions && transactions.length > 0) { %>
+                <% transactions.slice(0, 10).forEach(t => { %>
+                  <tr>
+                    <td class="small text-muted"><%= new Date(t.created_at).toLocaleString() %></td>
+                    <td class="fw-bold"><%= t.product_id ? t.product_id.name : 'Deleted Product' %></td>
+                    <td>
+                      <% if (t.type === 'IN') { %>
+                        <span class="badge bg-success-subtle text-success">STOCK IN</span>
+                      <% } else if (t.type === 'OUT') { %>
+                        <span class="badge bg-danger-subtle text-danger">STOCK OUT</span>
+                      <% } else { %>
+                        <span class="badge bg-secondary-subtle text-secondary">ADJUSTMENT</span>
+                      <% } %>
+                    </td>
+                    <td class="fw-bold"><%= t.quantity > 0 ? '+' + t.quantity : t.quantity %></td>
+                    <td class="small"><%= t.created_by ? t.created_by.full_name : 'System' %></td>
+                    <td class="small text-muted"><%= t.note || '-' %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="6" class="text-center text-muted py-4">No stock transactions logged yet.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    <% } else if (page === 'inventory') { %>
+      <!-- INVENTORY LISTING PAGE -->
+      <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center mb-4 gap-2">
+        <div>
+          <h4 class="fw-bold mb-1">Paint Inventory</h4>
+          <p class="text-muted small mb-0">View and manage all paint products and stock levels.</p>
+        </div>
+        <% if (user.role === 'shop_admin') { %>
+          <a href="/app?page=add_product" class="btn btn-sky btn-sm d-inline-flex align-items-center gap-1">
+            <i data-lucide="plus" style="width: 16px;"></i> Add New Product
+          </a>
+        <% } %>
+      </div>
+
+      <!-- SEARCH & FILTER BAR -->
+      <div class="card card-custom p-3 mb-4">
+        <form action="/app" method="GET" class="row g-2">
+          <input type="hidden" name="page" value="inventory">
+          <div class="col-md-5">
+            <div class="input-group input-group-sm">
+              <span class="input-group-text bg-light text-muted"><i data-lucide="search" style="width: 16px;"></i></span>
+              <input type="text" name="search" class="form-control" placeholder="Search by name, brand, shade, size..." value="<%= query.search || '' %>">
+            </div>
+          </div>
+          <div class="col-md-3">
+            <input type="text" name="brand" class="form-control form-control-sm" placeholder="Filter by Brand (e.g. Asian Paints)" value="<%= query.brand || '' %>">
+          </div>
+          <div class="col-md-3">
+            <input type="text" name="category" class="form-control form-control-sm" placeholder="Filter by Category (e.g. Emulsion)" value="<%= query.category || '' %>">
+          </div>
+          <div class="col-md-1">
+            <button type="submit" class="btn btn-sky btn-sm w-100">Filter</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- PRODUCTS TABLE -->
+      <div class="card card-custom p-4">
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead class="table-light small">
+              <tr>
+                <th>Product Name & Shade</th>
+                <th>Brand & Category</th>
+                <th>Pack Size</th>
+                <th>Purchase</th>
+                <th>Selling Price</th>
+                <th>Current Stock</th>
+                <th>Stock Value</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (products && products.length > 0) { %>
+                <% products.forEach(p => { %>
+                  <tr>
+                    <td>
+                      <div class="fw-bold text-dark"><%= p.name %></div>
+                      <div class="text-muted extra-small">Shade: <%= p.shade || 'N/A' %></div>
+                    </td>
+                    <td>
+                      <div class="fw-semibold small"><%= p.brand || '-' %></div>
+                      <div class="text-muted extra-small"><%= p.category || '-' %></div>
+                    </td>
+                    <td class="small"><%= p.size %> <%= p.unit %></td>
+                    <td class="small text-muted"><%= formatCurrency(p.purchase_price) %></td>
+                    <td class="fw-bold"><%= formatCurrency(p.selling_price) %></td>
+                    <td class="fw-bold">
+                      <%= p.stock %> <span class="extra-small text-muted fw-normal"><%= p.unit %></span>
+                    </td>
+                    <td class="fw-bold text-primary"><%= formatCurrency(p.selling_price * p.stock) %></td>
+                    <td>
+                      <% if (p.stock === 0) { %>
+                        <span class="badge badge-out-of-stock">Out of Stock</span>
+                      <% } else if (p.stock <= p.minimum_stock) { %>
+                        <span class="badge badge-low-stock">Low Stock</span>
+                      <% } else { %>
+                        <span class="badge badge-in-stock">In Stock</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <div class="d-flex gap-1">
+                        <a href="/app?page=stock_management&product_id=<%= p._id %>" class="btn btn-sm btn-light-sky py-1 px-2" title="Stock IN/OUT">
+                          <i data-lucide="arrow-left-right" style="width: 14px;"></i>
+                        </a>
+                        <% if (user.role === 'shop_admin') { %>
+                          <a href="/app?page=add_product&edit_product_id=<%= p._id %>" class="btn btn-sm btn-outline-secondary py-1 px-2" title="Edit">
+                            <i data-lucide="edit-2" style="width: 14px;"></i>
+                          </a>
+                          <form action="/app" method="POST" class="d-inline" onsubmit="return confirm('Delete this product?');">
+                            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                            <input type="hidden" name="action" value="delete_product">
+                            <input type="hidden" name="product_id" value="<%= p._id %>">
+                            <button type="submit" class="btn btn-sm btn-outline-danger py-1 px-2" title="Delete">
+                              <i data-lucide="trash-2" style="width: 14px;"></i>
+                            </button>
+                          </form>
+                        <% } %>
+                      </div>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="9" class="text-center text-muted py-5">No products found in inventory.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    <% } else if (page === 'add_product') { %>
+      <!-- ADD / EDIT PRODUCT PAGE (SHOP ADMIN) -->
+      <% const isEdit = !!selected_product; %>
+      <div class="row justify-content-center">
+        <div class="col-lg-8">
+          <div class="card card-custom p-4">
+            <h5 class="fw-bold mb-3"><%= isEdit ? 'Edit Product Details' : 'Add New Paint Product' %></h5>
+
+            <form action="/app" method="POST">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="action" value="<%= isEdit ? 'update_product' : 'create_product' %>">
+              <% if (isEdit) { %>
+                <input type="hidden" name="product_id" value="<%= selected_product._id %>">
+              <% } %>
+
+              <div class="row g-3 mb-3">
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">Product Name *</label>
+                  <input type="text" name="name" class="form-control" placeholder="Royale Health Shield Emulsion" value="<%= isEdit ? selected_product.name : '' %>" required>
+                </div>
+                <div class="col-md-6">
+                  <label class="form-label small fw-semibold">Brand / Manufacturer</label>
+                  <input type="text" name="brand" class="form-control" placeholder="Asian Paints / Berger / Dulux" value="<%= isEdit ? selected_product.brand : '' %>">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-semibold">Category</label>
+                  <input type="text" name="category" class="form-control" placeholder="Interior / Exterior / Primer" value="<%= isEdit ? selected_product.category : '' %>">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-semibold">Subcategory</label>
+                  <input type="text" name="subcategory" class="form-control" placeholder="Luxury Emulsion / Enamel" value="<%= isEdit ? selected_product.subcategory : '' %>">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-semibold">Shade / Color Code</label>
+                  <input type="text" name="shade" class="form-control" placeholder="Pure White (0001)" value="<%= isEdit ? selected_product.shade : '' %>">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-semibold">Pack Size</label>
+                  <input type="text" name="size" class="form-control" placeholder="1, 4, 10, 20" value="<%= isEdit ? selected_product.size : '' %>">
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-semibold">Measurement Unit</label>
+                  <select name="unit" class="form-select">
+                    <option value="Liters" <%= isEdit && selected_product.unit === 'Liters' ? 'selected' : '' %>>Liters (L)</option>
+                    <option value="Kg" <%= isEdit && selected_product.unit === 'Kg' ? 'selected' : '' %>>Kilograms (Kg)</option>
+                    <option value="Pieces" <%= isEdit && selected_product.unit === 'Pieces' ? 'selected' : '' %>>Pieces / Items</option>
+                    <option value="Cans" <%= isEdit && selected_product.unit === 'Cans' ? 'selected' : '' %>>Cans</option>
+                    <option value="Buckets" <%= isEdit && selected_product.unit === 'Buckets' ? 'selected' : '' %>>Buckets</option>
+                  </select>
+                </div>
+                <div class="col-md-4">
+                  <label class="form-label small fw-semibold">Supplier</label>
+                  <select name="supplier_id" class="form-select">
+                    <option value="">-- Select Supplier --</option>
+                    <% suppliers.forEach(sup => { %>
+                      <option value="<%= sup._id %>" <%= isEdit && selected_product.supplier_id && selected_product.supplier_id.toString() === sup._id.toString() ? 'selected' : '' %>>
+                        <%= sup.name %>
+                      </option>
+                    <% }) %>
+                  </select>
+                </div>
+              </div>
+
+              <hr>
+
+              <div class="row g-3 mb-3">
+                <div class="col-md-3">
+                  <label class="form-label small fw-semibold">Purchase Price (₹) *</label>
+                  <input type="number" step="0.01" name="purchase_price" class="form-control" placeholder="450.00" value="<%= isEdit ? selected_product.purchase_price : '' %>" required>
+                </div>
+                <div class="col-md-3">
+                  <label class="form-label small fw-semibold">Selling Price (₹) *</label>
+                  <input type="number" step="0.01" name="selling_price" class="form-control" placeholder="580.00" value="<%= isEdit ? selected_product.selling_price : '' %>" required>
+                </div>
+                <% if (!isEdit) { %>
+                  <div class="col-md-3">
+                    <label class="form-label small fw-semibold">Initial Stock *</label>
+                    <input type="number" name="stock" class="form-control" placeholder="50" value="0" required>
+                  </div>
+                <% } %>
+                <div class="col-md-3">
+                  <label class="form-label small fw-semibold">Minimum Stock Alert Level *</label>
+                  <input type="number" name="minimum_stock" class="form-control" placeholder="5" value="<%= isEdit ? selected_product.minimum_stock : '5' %>" required>
+                </div>
+                <div class="col-12">
+                  <label class="form-label small fw-semibold">Description / Notes</label>
+                  <textarea name="description" class="form-control" rows="2" placeholder="Washable interior paint with high gloss finish..."><%= isEdit ? selected_product.description : '' %></textarea>
+                </div>
+              </div>
+
+              <div class="d-flex justify-content-end gap-2">
+                <a href="/app?page=inventory" class="btn btn-light">Cancel</a>
+                <button type="submit" class="btn btn-sky"><%= isEdit ? 'Save Product Changes' : 'Add to Inventory' %></button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    <% } else if (page === 'stock_management') { %>
+      <!-- STOCK MANAGEMENT (IN / OUT / ADJUSTMENT) -->
+      <div class="mb-4">
+        <h4 class="fw-bold mb-1">Stock Management (IN / OUT)</h4>
+        <p class="text-muted small mb-0">Record incoming stock receipts, customer sales, and stock adjustments.</p>
+      </div>
+
+      <div class="row g-4">
+        <!-- STOCK IN FORM -->
+        <div class="col-md-6 col-lg-4">
+          <div class="card card-custom p-4 border-top border-3 border-success">
+            <h6 class="fw-bold text-success mb-3"><i data-lucide="arrow-down-left" class="me-1"></i> Stock IN (Receipts)</h6>
+            <form action="/app" method="POST">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="action" value="stock_in">
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Select Product *</label>
+                <select name="product_id" class="form-select" required>
+                  <option value="">-- Choose Product --</option>
+                  <% products.forEach(p => { %>
+                    <option value="<%= p._id %>" <%= query.product_id && query.product_id.toString() === p._id.toString() ? 'selected' : '' %>>
+                      <%= p.name %> (Current Stock: <%= p.stock %>)
+                    </option>
+                  <% }) %>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Quantity Received *</label>
+                <input type="number" name="quantity" class="form-control" placeholder="10" min="1" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Note / Invoice #</label>
+                <input type="text" name="note" class="form-control" placeholder="Supplier Invoice #1029">
+              </div>
+
+              <button type="submit" class="btn btn-success w-100 fw-bold">Process Stock IN</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- STOCK OUT FORM -->
+        <div class="col-md-6 col-lg-4">
+          <div class="card card-custom p-4 border-top border-3 border-danger">
+            <h6 class="fw-bold text-danger mb-3"><i data-lucide="arrow-up-right" class="me-1"></i> Stock OUT (Sales / Dispatch)</h6>
+            <form action="/app" method="POST">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="action" value="stock_out">
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Select Product *</label>
+                <select name="product_id" class="form-select" required>
+                  <option value="">-- Choose Product --</option>
+                  <% products.forEach(p => { %>
+                    <option value="<%= p._id %>" <%= query.product_id && query.product_id.toString() === p._id.toString() ? 'selected' : '' %>>
+                      <%= p.name %> (Stock: <%= p.stock %>)
+                    </option>
+                  <% }) %>
+                </select>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Quantity Sold / Issued *</label>
+                <input type="number" name="quantity" class="form-control" placeholder="5" min="1" required>
+              </div>
+
+              <div class="mb-3">
+                <label class="form-label small fw-semibold">Note / Customer Sale #</label>
+                <input type="text" name="note" class="form-control" placeholder="Customer Bill #405">
+              </div>
+
+              <button type="submit" class="btn btn-danger w-100 fw-bold">Process Stock OUT</button>
+            </form>
+          </div>
+        </div>
+
+        <!-- STOCK ADJUSTMENT FORM (SHOP ADMIN ONLY) -->
+        <% if (user.role === 'shop_admin') { %>
+          <div class="col-md-12 col-lg-4">
+            <div class="card card-custom p-4 border-top border-3 border-warning">
+              <h6 class="fw-bold text-warning mb-3"><i data-lucide="sliders" class="me-1"></i> Stock Adjustment</h6>
+              <form action="/app" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="action" value="stock_adjustment">
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Select Product *</label>
+                  <select name="product_id" class="form-select" required>
+                    <option value="">-- Choose Product --</option>
+                    <% products.forEach(p => { %>
+                      <option value="<%= p._id %>"><%= p.name %> (Current: <%= p.stock %>)</option>
+                    <% }) %>
+                  </select>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">New Exact Stock *</label>
+                  <input type="number" name="new_stock" class="form-control" placeholder="0" min="0" required>
+                </div>
+
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Reason for Adjustment</label>
+                  <input type="text" name="note" class="form-control" placeholder="Physical stock audit correction">
+                </div>
+
+                <button type="submit" class="btn btn-warning text-dark w-100 fw-bold">Adjust Stock</button>
+              </form>
+            </div>
+          </div>
+        <% } %>
+      </div>
+
+    <% } else if (page === 'low_stock') { %>
+      <!-- LOW STOCK ALERTS -->
+      <div class="mb-4">
+        <h4 class="fw-bold mb-1">Low & Out-of-Stock Alerts</h4>
+        <p class="text-muted small mb-0">Products requiring immediate reordering from suppliers.</p>
+      </div>
+
+      <div class="card card-custom p-4 mb-4">
+        <h5 class="fw-bold mb-3 text-warning"><i data-lucide="alert-triangle" class="me-1"></i> Reorder List</h5>
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead class="table-light small">
+              <tr>
+                <th>Product Name</th>
+                <th>Brand</th>
+                <th>Supplier</th>
+                <th>Current Stock</th>
+                <th>Minimum Alert Stock</th>
+                <th>Status</th>
+                <th>Quick Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% const alertProducts = products.filter(p => p.stock <= p.minimum_stock); %>
+              <% if (alertProducts.length > 0) { %>
+                <% alertProducts.forEach(p => { %>
+                  <tr>
+                    <td class="fw-bold"><%= p.name %></td>
+                    <td><%= p.brand || '-' %></td>
+                    <td><%= p.supplier_id ? p.supplier_id.name : 'No Supplier' %></td>
+                    <td class="fw-bold fs-6"><%= p.stock %> <%= p.unit %></td>
+                    <td class="text-muted small"><%= p.minimum_stock %> <%= p.unit %></td>
+                    <td>
+                      <% if (p.stock === 0) { %>
+                        <span class="badge badge-out-of-stock">Out of Stock</span>
+                      <% } else { %>
+                        <span class="badge badge-low-stock">Low Stock</span>
+                      <% } %>
+                    </td>
+                    <td>
+                      <a href="/app?page=stock_management&product_id=<%= p._id %>" class="btn btn-sm btn-sky py-1">
+                        + Restock IN
+                      </a>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="7" class="text-center text-muted py-4">All products are sufficiently stocked!</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+    <% } else if (page === 'suppliers') { %>
+      <!-- SUPPLIERS PAGE -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="fw-bold mb-1">Paint Suppliers</h4>
+          <p class="text-muted small mb-0">Manage paint brand distributors and suppliers.</p>
+        </div>
+        <% if (user.role === 'shop_admin') { %>
+          <button class="btn btn-sky btn-sm" data-bs-toggle="modal" data-bs-target="#addSupplierModal">
+            <i data-lucide="plus" style="width: 16px;"></i> Add Supplier
+          </button>
+        <% } %>
+      </div>
+
+      <div class="card card-custom p-4">
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead class="table-light small">
+              <tr>
+                <th>Supplier Name</th>
+                <th>Contact Phone</th>
+                <th>Email</th>
+                <th>Address</th>
+                <% if (user.role === 'shop_admin') { %>
+                  <th>Actions</th>
+                <% } %>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (suppliers && suppliers.length > 0) { %>
+                <% suppliers.forEach(sup => { %>
+                  <tr>
+                    <td class="fw-bold"><%= sup.name %></td>
+                    <td><%= sup.phone || '-' %></td>
+                    <td><%= sup.email || '-' %></td>
+                    <td><%= sup.address || '-' %></td>
+                    <% if (user.role === 'shop_admin') { %>
+                      <td>
+                        <form action="/app" method="POST" class="d-inline" onsubmit="return confirm('Delete this supplier?');">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="action" value="delete_supplier">
+                          <input type="hidden" name="supplier_id" value="<%= sup._id %>">
+                          <button type="submit" class="btn btn-sm btn-outline-danger py-1">Delete</button>
+                        </form>
+                      </td>
+                    <% } %>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="5" class="text-center text-muted py-4">No suppliers added yet.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ADD SUPPLIER MODAL -->
+      <% if (user.role === 'shop_admin') { %>
+        <div class="modal fade" id="addSupplierModal" tabindex="-1">
+          <div class="modal-dialog">
+            <div class="modal-content border-0 shadow">
+              <div class="modal-header border-bottom">
+                <h5 class="modal-header-title modal-title fw-bold">Add Supplier</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+              </div>
+              <form action="/app" method="POST">
+                <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                <input type="hidden" name="action" value="create_supplier">
+                <div class="modal-body">
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold">Supplier Name *</label>
+                    <input type="text" name="name" class="form-control" placeholder="Asian Paints Regional Depot" required>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold">Phone Number</label>
+                    <input type="text" name="phone" class="form-control" placeholder="+91 9898012345">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold">Email Address</label>
+                    <input type="email" name="email" class="form-control" placeholder="depot@asianpaints.com">
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label small fw-semibold">Address</label>
+                    <textarea name="address" class="form-control" rows="2" placeholder="Industrial Area, Sector 4"></textarea>
+                  </div>
+                </div>
+                <div class="modal-footer border-top">
+                  <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                  <button type="submit" class="btn btn-sky">Add Supplier</button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      <% } %>
+
+    <% } else if (page === 'staff' && user.role === 'shop_admin') { %>
+      <!-- STAFF ACCOUNTS MANAGEMENT (SHOP ADMIN) -->
+      <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+          <h4 class="fw-bold mb-1">Staff Management</h4>
+          <p class="text-muted small mb-0">Create and manage store staff accounts for stock operations.</p>
+        </div>
+        <button class="btn btn-sky btn-sm" data-bs-toggle="modal" data-bs-target="#addStaffModal">
+          <i data-lucide="user-plus" style="width: 16px;"></i> Create Staff Account
+        </button>
+      </div>
+
+      <div class="card card-custom p-4">
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead class="table-light small">
+              <tr>
+                <th>Full Name</th>
+                <th>Email Address</th>
+                <th>Account Status</th>
+                <th>Password Status</th>
+                <th>Created Date</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (staffs && staffs.length > 0) { %>
+                <% staffs.forEach(st => { %>
+                  <tr>
+                    <td class="fw-bold"><%= st.full_name %></td>
+                    <td><%= st.email %></td>
+                    <td>
+                      <span class="badge <%= st.is_active ? 'bg-success-subtle text-success' : 'bg-danger-subtle text-danger' %>">
+                        <%= st.is_active ? 'Active' : 'Inactive' %>
+                      </span>
+                    </td>
+                    <td>
+                      <span class="badge <%= st.must_change_password ? 'bg-warning-subtle text-warning' : 'bg-info-subtle text-info' %>">
+                        <%= st.must_change_password ? 'Password Change Required' : 'Active' %>
+                      </span>
+                    </td>
+                    <td class="small text-muted"><%= new Date(st.created_at).toLocaleDateString() %></td>
+                    <td>
+                      <div class="d-flex gap-2">
+                        <form action="/app" method="POST" class="d-inline" onsubmit="return confirm('Force password reset for this staff member?');">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="action" value="force_password_reset">
+                          <input type="hidden" name="target_user_id" value="<%= st._id %>">
+                          <button type="submit" class="btn btn-sm btn-outline-warning py-1">Reset Password</button>
+                        </form>
+
+                        <form action="/app" method="POST" class="d-inline">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="action" value="toggle_user_status">
+                          <input type="hidden" name="target_user_id" value="<%= st._id %>">
+                          <button type="submit" class="btn btn-sm <%= st.is_active ? 'btn-outline-secondary' : 'btn-outline-success' %> py-1">
+                            <%= st.is_active ? 'Deactivate' : 'Activate' %>
+                          </button>
+                        </form>
+
+                        <form action="/app" method="POST" class="d-inline" onsubmit="return confirm('Remove staff member?');">
+                          <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+                          <input type="hidden" name="action" value="delete_staff">
+                          <input type="hidden" name="staff_id" value="<%= st._id %>">
+                          <button type="submit" class="btn btn-sm btn-outline-danger py-1">Delete</button>
+                        </form>
+                      </div>
+                    </td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="6" class="text-center text-muted py-4">No staff members created yet.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ADD STAFF MODAL -->
+      <div class="modal fade" id="addStaffModal" tabindex="-1">
+        <div class="modal-dialog">
+          <div class="modal-content border-0 shadow">
+            <div class="modal-header border-bottom">
+              <h5 class="modal-header-title modal-title fw-bold">Create Staff Account</h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="/app" method="POST">
+              <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+              <input type="hidden" name="action" value="create_staff">
+              <div class="modal-body">
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Staff Full Name *</label>
+                  <input type="text" name="full_name" class="form-control" placeholder="Rahul Sharma" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Login Email *</label>
+                  <input type="email" name="email" class="form-control" placeholder="rahul@shop.com" required>
+                </div>
+                <div class="mb-3">
+                  <label class="form-label small fw-semibold">Temporary Password *</label>
+                  <input type="text" name="initial_password" class="form-control" value="Staff2026" required>
+                  <div class="form-text extra-small">Staff will be prompted to change password upon first login.</div>
+                </div>
+              </div>
+              <div class="modal-footer border-top">
+                <button type="button" class="btn btn-light" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" class="btn btn-sky">Create Staff</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+
+    <% } else if (page === 'reports' && user.role === 'shop_admin') { %>
+      <!-- REPORTS PAGE -->
+      <div class="mb-4">
+        <h4 class="fw-bold mb-1">Inventory & Valuation Reports</h4>
+        <p class="text-muted small mb-0">Financial summary and stock valuation for your paint shop.</p>
+      </div>
+
+      <div class="row g-4 mb-4">
+        <div class="col-md-6">
+          <div class="card card-custom p-4">
+            <h6 class="fw-bold mb-3">Inventory Valuation Summary</h6>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted small">Total Products Cataloged</span>
+              <span class="fw-bold"><%= dashboard_stats.total_products || 0 %></span>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted small">Total Stock Units</span>
+              <span class="fw-bold"><%= (dashboard_stats.total_stock_units || 0).toLocaleString('en-IN') %></span>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted small">Total Inventory Market Value</span>
+              <span class="fw-bold text-primary fs-5"><%= formatCurrency(dashboard_stats.inventory_value) %></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6">
+          <div class="card card-custom p-4">
+            <h6 class="fw-bold mb-3">Stock Health Status</h6>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted small">Adequately Stocked Items</span>
+              <span class="fw-bold text-success"><%= (dashboard_stats.total_products || 0) - (dashboard_stats.low_stock_count || 0) - (dashboard_stats.out_of_stock_count || 0) %></span>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted small">Low Stock Items</span>
+              <span class="fw-bold text-warning"><%= dashboard_stats.low_stock_count || 0 %></span>
+            </div>
+            <div class="d-flex justify-content-between py-2 border-bottom">
+              <span class="text-muted small">Out of Stock Items</span>
+              <span class="fw-bold text-danger"><%= dashboard_stats.out_of_stock_count || 0 %></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    <% } else if (page === 'stock_history') { %>
+      <!-- STOCK AUDIT HISTORY PAGE -->
+      <div class="mb-4">
+        <h4 class="fw-bold mb-1">Stock Transaction Audit History</h4>
+        <p class="text-muted small mb-0">Detailed historical record of every Stock IN, Stock OUT, and Stock Adjustment.</p>
+      </div>
+
+      <div class="card card-custom p-4">
+        <div class="table-responsive">
+          <table class="table align-middle">
+            <thead class="table-light small">
+              <tr>
+                <th>Date & Time</th>
+                <th>Product</th>
+                <th>Type</th>
+                <th>Quantity</th>
+                <th>Performed By</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody>
+              <% if (transactions && transactions.length > 0) { %>
+                <% transactions.forEach(t => { %>
+                  <tr>
+                    <td class="small text-muted"><%= new Date(t.created_at).toLocaleString() %></td>
+                    <td class="fw-bold"><%= t.product_id ? t.product_id.name : 'Deleted Product' %></td>
+                    <td>
+                      <% if (t.type === 'IN') { %>
+                        <span class="badge bg-success-subtle text-success">STOCK IN</span>
+                      <% } else if (t.type === 'OUT') { %>
+                        <span class="badge bg-danger-subtle text-danger">STOCK OUT</span>
+                      <% } else { %>
+                        <span class="badge bg-secondary-subtle text-secondary">ADJUSTMENT</span>
+                      <% } %>
+                    </td>
+                    <td class="fw-bold"><%= t.quantity > 0 ? '+' + t.quantity : t.quantity %></td>
+                    <td class="small"><%= t.created_by ? t.created_by.full_name : 'System' %></td>
+                    <td class="small text-muted"><%= t.note || '-' %></td>
+                  </tr>
+                <% }) %>
+              <% } else { %>
+                <tr><td colspan="6" class="text-center text-muted py-4">No transactions recorded yet.</td></tr>
+              <% } %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    <% } %>
+
+  </div>
+</div>
+
+<!-- BOOTSTRAP 5.3 JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  lucide.createIcons();
+
+  const sidebar = document.getElementById('appSidebar');
+  const toggleBtn = document.getElementById('sidebarToggleBtn');
+  const closeBtn = document.getElementById('sidebarCloseBtn');
+
+  if (toggleBtn && sidebar) {
+    toggleBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('show');
+    });
+  }
+  if (closeBtn && sidebar) {
+    closeBtn.addEventListener('click', () => {
+      sidebar.classList.remove('show');
+    });
+  }
+</script>
+</body>
+</html>
